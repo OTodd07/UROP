@@ -17,6 +17,31 @@ train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=4, shuffle=
 test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=4, shuffle=True)
 
 
+class LeNet(nn.Module):
+
+    def __init__(self):
+        super(LeNet,self).__init__()
+        self.pool    = nn.MaxPool2d(2,2)
+        self.conv1  = nn.Conv2d(1,10,5)
+        self.conv2  = nn.Conv2d(10,20,5)
+        self.fc1    = nn.Linear(20* 4 * 4, 50)
+        self.fc2    = nn.Linear(50,10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.flatten_tensor(x)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+    def flatten_tensor(self,x):
+        length = 1
+        for s in x.size()[1:]:
+            length *= s
+        return x.view(-1,length)
+
+
 class ResNet(nn.Module):
 
     def __init__(self, block, stacks,  num_classes):
@@ -224,7 +249,8 @@ def plot_loss(xVals, yVals):
 cnn = CNN()
 #model = models.alexnet(pretrained=False)
 #model = models.resnet18(pretrained=False)
-model = ResNet(Block, [2,2,2,2], 10)
+#model = ResNet(Block, [2,2,2,2], 10)
+model = LeNet()
 model.cuda()
 cnn.create_VGG()
 criterion = nn.CrossEntropyLoss()
