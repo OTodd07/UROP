@@ -1,21 +1,43 @@
+import struct
+from matplotlib.animation import FuncAnimation
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision import transforms
 import torchvision.datasets as datasets
+from torchvision import transforms
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import torchvision.models as models
+from CustomMNIST import CustomMNIST
+from torch.autograd import Variable
+import pandas as pd
+import numpy as np
+
 
 #Download the mnist data used for training and testing the network
 
-mnist_trainset = datasets.MNIST(root='./data', train=True, download=True, transform=transforms.Compose([transforms.ToTensor()]))
-mnist_testset  = datasets.MNIST(root='./data', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
+#mnist_trainset = datasets.MNIST(root='./data/original_mnist', train=True, download=True, transform=transforms.Compose([transforms.ToTensor()]))
+#mnist_testset  = datasets.MNIST(root='./data/original_mnist', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
+mnist_trainset = CustomMNIST(root='./data/modified_mnist',train=True,process=True,transform=transforms.Compose([transforms.ToTensor()]))
+mnist_testset = CustomMNIST(root='./data/modified_mnist',train=False,process=True,transform=transforms.Compose([transforms.ToTensor()]))
 
 #Initialise the data loaders for training and testing
 train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=4, shuffle=True)
 test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=4, shuffle=True)
 
+fig, ax = plt.subplots()
+xData, yData = [] ,[]
+ln, = plt.plot([],[], animated=True)
+
+
+
+
+#Resize tensor to appropriate shape to be compatible with fc layer
+
+def flatten_tensor(x):
+    length = 1
+    for s in x.size()[1:]:
+        length *= s
+    return x.view(-1,length)
 
 class LeNet(nn.Module):
 
@@ -30,16 +52,12 @@ class LeNet(nn.Module):
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = self.flatten_tensor(x)
+        x = flatten_tensor(x)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
 
-    def flatten_tensor(self,x):
-        length = 1
-        for s in x.size()[1:]:
-            length *= s
-        return x.view(-1,length)
+
 
 
 class ResNet(nn.Module):
@@ -127,77 +145,106 @@ class Block(nn.Module):
         return out
 
 
-
-
-class CNN(nn.Module):
+class VGG(nn.Module):
     
     def __init__(self):
-        super(CNN, self).__init__()
-
-
-# Set up the layers to be used in the network
-
-    def create_Lenet(self):
-        self.pool   = nn.MaxPool2d(2,2)
-        self.conv1  = nn.Conv2d(1,10,5)
-        self.conv2  = nn.Conv2d(10,20,5)
-        self.fc1    = nn.Linear(20* 4 * 4, 50)
-        self.fc2    = nn.Linear(50,10)
-        self.num    = 3
-
-
-    def create_VGG(self):
-        self.pool   = nn.MaxPool2d(2,2)
+        super(VGG, self).__init__()
+        self.pool   = nn.MaxPool2d(kernel_size=(2,2),stride=(2,2))
         self.conv1  = nn.Conv2d(1,64,3,padding=(1,1))
         self.conv2  = nn.Conv2d(64,64,3,padding=(1,1))
         self.conv3  = nn.Conv2d(64,128,3,padding=(1,1))
         self.conv4  = nn.Conv2d(128,128,3,padding=(1,1))
         self.conv5  = nn.Conv2d(128,256,3,padding=(1,1))
         self.conv6  = nn.Conv2d(256,256,3,padding=(1,1))
-        self.conv7  = nn.Conv2d(256,512,3,padding=(1,1))
-        self.conv8  = nn.Conv2d(512,512,3,padding=(1,1))
+        self.conv7  = nn.Conv2d(256,256,3,padding=(1,1))
+        self.conv8  = nn.Conv2d(256,512,3,padding=(1,1))
+        self.conv9  = nn.Conv2d(512,512,3,padding=(1,1))
+        self.conv10  = nn.Conv2d(512,512,3,padding=(1,1))
+        self.conv11  = nn.Conv2d(512,512,3,padding=(1,1))
+        self.conv12  = nn.Conv2d(512,512,3,padding=(1,1))
+        self.conv13  = nn.Conv2d(512,512,3,padding=(1,1))
         self.fc1    = nn.Linear(512, 4096)
         self.fc2    = nn.Linear(4096,4096)
         self.fc3    = nn.Linear(4096,10)
-        self.num    = 3
 
 
-    def forward_Lenet(self,x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.flatten_tensor(x)
+    def forward(self,x):
+        x = self.conv1(x)
+        x = F.relu(nn.BatchNorm2d(64)(x))
+        x = self.conv2(x)
+        x = F.relu(nn.BatchNorm2d(64)(x))
+        x = self.pool(x)
+        x = self.conv3(x)
+        x = F.relu(nn.BatchNorm2d(128)(x))
+        x = self.conv4(x)
+        x = F.relu(nn.BatchNorm2d(128)(x))
+        x = self.pool(x)
+        x = self.conv5(x)
+        x = F.relu(nn.BatchNorm2d(256)(x))
+        x = self.conv6(x)
+        x = F.relu(nn.BatchNorm2d(256)(x))
+        x = self.conv7(x)
+        x = F.relu(nn.BatchNorm2d(256)(x))
+        padding = Variable(torch.zeros(4,256,1,7))
+        x = torch.cat((x,padding),2)
+        padding = Variable(torch.zeros(4,256,8,1))
+        x = torch.cat((x,padding),3)
+        x = self.pool(x)
+        x = self.conv8(x)
+        x = F.relu(nn.BatchNorm2d(512)(x))
+        x = self.conv9(x)
+        x = F.relu(nn.BatchNorm2d(512)(x))
+        x = self.conv10(x)
+        x = F.relu(nn.BatchNorm2d(512)(x))
+        x = self.pool(x)
+        x = self.conv11(x)
+        x = F.relu(nn.BatchNorm2d(512)(x))
+        x = self.conv12(x)
+        x = F.relu(nn.BatchNorm2d(512)(x))
+        x = self.conv13(x)
+        x = F.relu(nn.BatchNorm2d(512)(x))
+        x = self.pool(x)
+
+        x = flatten_tensor(x)
         x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-    def forward_VGG(self,x):
-        x = self.pool(F.relu(self.conv2(self.conv1(x))))
-        x = self.pool(F.relu(self.conv4(self.conv3(x))))
-        x = self.pool(F.relu(self.conv6(self.conv6(self.conv6(self.conv5(x))))))
-        x = self.pool(F.relu(self.conv8(self.conv8(self.conv8(self.conv7(x))))))
-        x = self.flatten_tensor(x)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = self.fc3(x)
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
         x = F.softmax(x, dim=0)
         return x
 
 
-    def forward(self,x):
-        return self.forward_VGG(x)
+class MLP(nn.Module):
 
-# Resize tensor to appropriate shape to be compatible with fc layer
-    def flatten_tensor(self,x):
-        length = 1
-        for s in x.size()[1:]:
-            length *= s
-        return x.view(-1,length)
+    def __init__(self):
+        super(MLP, self).__init__()
+        self.fc1 = nn.Linear(784,600)
+        self.fc2 = nn.Linear(600,300)
+        self.fc3 = nn.Linear(300,150)
+        self.fc4 = nn.Linear(150,10)
+
+    def forward(self, x):
+        x = flatten_tensor(x)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = F.softmax(x, dim = 0)
+        return x
+
+
+
+
+
+
 
 
 def create_optimizer(lr,cnn,momentum):
-    return optim.SGD(cnn.parameters(),lr,momentum)
+    #return torch.optim.Adadelta(cnn.parameters(),lr)
+    #return torch.optim.Rprop(cnn.parameters(),lr)
+    #return optim.SGD(cnn.parameters(),lr,momentum)
+    return optim.Adam(cnn.parameters(),lr)
 
-
+'''
 # Runs the training loop for 'epoch' number of times
 def train(model,epoch,optimizer,criterion):
     x = []
@@ -209,58 +256,197 @@ def train(model,epoch,optimizer,criterion):
             inputs, labels = data
             optimizer.zero_grad()
 
-            outputs = model(inputs.cuda())
-            loss = criterion(outputs.cuda(), labels.cuda())
+            outputs = model(inputs)
+            labels = labels.long()
+            loss = criterion(outputs, labels)
             running_loss += loss.item()
-            loss.backward()
+            loss.backward() 
             optimizer.step()
+        print(running_loss/len(train_loader))
         x.append(e)
         y.append(running_loss/len(train_loader))
-    plot_loss(x,y) 
+
+
+    #plot_loss(x,y)
 
     print('Finished training')
+    return [x,y]
+
+'''
+
+def train(frame, *fargs):
+
+    model = fargs[0]
+    optimizer = fargs[1]
+    criterion = fargs[2]
+    running_loss = 0.0
+    x = train_loader
+    y = 0
+
+    #for i, data in enumerate(train_loader, 0):
+
+    data = fargs[5][frame][1]
+    inputs, labels = data
+    optimizer.zero_grad()
+
+    outputs = model(inputs)
+    labels = labels.long()
+    loss = criterion(outputs, labels)
+    running_loss += loss.item()
+    loss.backward()
+    optimizer.step()
+
+    print(running_loss)
+    print(y)
+    print('here')
+
+    fargs[3].append(frame)
+    fargs[4].append(running_loss)
+    ln.set_data(fargs[3], fargs[4])
+
+    return ln,
+
 
 # Compares the output from the network against the test data to assess accuracy
 def test(model):
     correct = 0
     total = 0
+    class_correct = list(0. for i in range(10))
+    class_total = list(0. for i in range(10))
 
     with torch.no_grad():
         for data in test_loader:
             images,labels = data
             outputs = model(images)
+            labels = labels.long()
             _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            c = (predicted == labels).squeeze()
 
-    print('Accuracy of network on the 10000 test images: %d %%' %(100 * correct / total))
+            for i in range(4):
+                label = labels[i]
+                class_correct[label] += c[i].item()
+                class_total[label] += 1
+
+    accuarcies =[]
+    for i in range(10):
+        accuarcies.append(100 * class_correct[i] /class_total [i])
+        #print('Accuracy of class %d was: %d %%' %(i,(100 * class_correct[i] / class_total[i])))
+    #print('Accuracy of network on the 10000 test images: %d %%' %(100 * correct / total))
+    return accuarcies
 
 def plot_loss(xVals, yVals):
+
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.plot(xVals, yVals)
-    plt.savefig('Graphs/NetworkConfig%s' %(cnn.num))
-    text_file = open('Graphs/NetworkConfig%s.txt' %(cnn.num) , 'w')
-    text_file.write('%s\nBatch size: %s ' %(cnn, train_loader.batch_size))
-    text_file.close()
-    
+
+
+
+def init():
+    ax.set_xlim(0,2500)
+    ax.set_ylim(0,3)
+    return ln,
+
+
+model = VGG()
+optimizer = create_optimizer(0.0001, model, 0.8)
+criterion = nn.CrossEntropyLoss()
+x = enumerate(train_loader)
+#train(model,1,optimizer,criterion)
+print(len(list(x)))
+
+args = (model, optimizer, criterion, xData, yData, list(enumerate(train_loader)))
+ani = FuncAnimation(fig, train, frames= range(2500), fargs=args, init_func=init, blit=True )
+plt.show()
+'''
+
+
+'''
+
+
+def run_model(model,loss_vals, acc_values,lr,momentum,criter):
+    opt = create_optimizer(lr,model,momentum)
+    loss_vals.append(train(model,10,opt,criter))
+    acc_values.append(test(model))
+
+
+
+
+
+
+
     
 
-cnn = CNN()
-#model = models.alexnet(pretrained=False)
-#model = models.resnet18(pretrained=False)
-#model = ResNet(Block, [2,2,2,2], 10)
-model = LeNet()
-model.cuda()
-cnn.create_VGG()
+
+
+
+
+
+
+
+
+#model = ResNet(Block,[2,2,2,2],10)
+losses = []
+accuracies = []
 criterion = nn.CrossEntropyLoss()
 #criterion = F.nll_loss()
 #criterion = nn.NLLLoss()
 #criterion = nn.KLDivLoss()
-print(torch.cuda.get_device_name(0))
+#print(torch.cuda.get_device_name(0))
 
-print(train_loader.batch_size)
-optimizer = create_optimizer(0.001,cnn,0.8)
-train(model,2,optimizer,criterion)
-test(model)
+lr = 0.001
+momentum = 0.8
+run_model(LeNet(), losses, accuracies, lr, momentum, criterion)
+print('here')
+#run_model(MLP(), losses, accuracies, lr, momentum, criterion)
+#run_model(ResNet(Block,[2,2,2,2],10), losses, accuracies, lr, momentum, criterion)
+#run_model(LeNet(), losses, accuracies, lr, momentum, criterion)
+
+'''
+model = LeNet()
+optimizer = create_optimizer(lr, model, momentum)
+losses.append(train(model, 10 ,optimizer,criterion))
+accuracies.append(test(model))
+
+model = MLP()
+optimizer = create_optimizer(lr, model, momentum)
+losses.append(train(model, 10 ,optimizer,criterion))
+accuracies.append(test(model))
+
+model = ResNet(Block,[2,2,2,2],10)
+optimizer = create_optimizer(lr, model, momentum)
+losses.append(train(model, 10 ,optimizer,criterion))
+accuracies.append(test(model))
+
+model = VGG()
+optimizer = create_optimizer(lr, model, momentum)
+losses.append(train(model, 10 ,optimizer,criterion))
+accuracies.append(test(model))
+
+'''
+
+plt.xlabel('epoch')
+plt.ylabel('loss')
+
+
+plt.plot(losses[0][0], losses[0][1])
+plt.plot(losses[1][0], losses[1][1])
+plt.plot(losses[2][0], losses[2][1])
+plt.plot(losses[3][0], losses[3][1])
+plt.legend(['LeNet','MLP','ResNet','VGG'],loc='upper right')
+plt.savefig('Graphs/originalLoss.png')
+#plt.show()
+
+
+
+x = ['0','1','2','3','4','5','6','7','8','9']
+
+
+df = pd.DataFrame(np.c_[accuracies[0],accuracies[1]], accuracies[2], accuracies[3], index=x)
+print(df)
+ax = df.plot.bar()
+ax.legend(['LeNet','MLP','ResNet','VGG'])
+plt.savefig('Graphs/originalAccuracy.png')
+#plt.show()
+
 
