@@ -58,50 +58,33 @@ class CustomMNIST(data.Dataset):
 
 
 
+        '''
+
         mndata = MNIST(os.path.join(self.root,self.raw_folder), return_type='numpy')
         self.test_data, self.test_labels = mndata.load_testing()
         self.train_data, self.test_labels = mndata.load_training()
-
-
         '''
+
+
 
         training_set = (
             read_image_file(os.path.join(self.root, self.raw_folder, 'train-images-idx3-ubyte')),
-            read_label_file(os.path.join(self.root, self.raw_folder, 'train-labels-idx1-ubyte'))
+            read_label_file(os.path.join(self.root, self.raw_folder, 'train-patho-idx1-ubyte'))
 
         )
         test_set = (
             read_image_file(os.path.join(self.root, self.raw_folder, 't10k-images-idx3-ubyte')),
-            read_label_file(os.path.join(self.root, self.raw_folder, 't10k-labels-idx1-ubyte'))
+            read_label_file(os.path.join(self.root, self.raw_folder, 't10k-patho-idx1-ubyte'))
         )
 
 
         #f1 = open('data//modified_mnist//processed//test', 'wb')
-        #with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
-        with open('data//modified_mnist//processed//test', 'wb') as f:
+        #with open('data//modified_mnist//processed//test', 'wb') as f:
+        with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
             torch.save(training_set, f)
-        #with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
-        with open('data//modified_mnist//processed//training', 'wb') as f:
+        #with open('data//modified_mnist//processed//training', 'wb') as f:
+        with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
             torch.save(test_set, f)
-   '''
-
-    def parse_mnist(self):
-        f1 = open(os.path.join(self.root,self.raw_folder,'train-images-idx3-ubyte'))
-        f3 = open(os.path.join(self.root,self.raw_folder,'train-labels-idx1-ubyte'))
-        f2 = open(os.path.join(self.root,self.raw_folder,'train-labels-idx1-ubyte'))
-        img_arr = np.fromfile(f1,np.uint32)
-        lbl_arr = np.fromfile(f2,np.uint32)
-        pert_arr = np.fromfile(f3,np.uint32)
-
-        print(hex(img_arr[1]))
-        print(hex(lbl_arr[1]))
-        print(hex(pert_arr[1]))
-        print('a')
-
-
-
-
-
 
 
 
@@ -126,10 +109,5 @@ def read_image_file(path):
         return torch.from_numpy(parsed).view(length, num_rows, num_cols)
 
 
-
 def get_int(b):
     return int(codecs.encode(b, 'hex'), 16)
-
-
-'''
-'''

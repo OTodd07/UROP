@@ -29,6 +29,11 @@ xData, yData = [] ,[]
 ln, = plt.plot([],[], animated=True)
 
 
+# Create MNIST datasets
+
+def init_datasets(root):
+    mnist_trainset = CustomMNIST(root=root, train=True, process=True, transform=transforms.Compose([transforms.ToTensor()]))
+    mnist_testset = CustomMNIST(root=root, train=False, process=True, transform=transforms.Compose([transforms.ToTensor()]))
 
 
 #Resize tensor to appropriate shape to be compatible with fc layer
@@ -149,7 +154,8 @@ class VGG(nn.Module):
     
     def __init__(self):
         super(VGG, self).__init__()
-        self.pool   = nn.MaxPool2d(kernel_size=(2,2),stride=(2,2))
+        self.pool   = nn.MaxPool2d(kernel_size=(2,2),stride=2)
+        self.adpool = nn.AdaptiveMaxPool2d((4,4))
         self.conv1  = nn.Conv2d(1,64,3,padding=(1,1))
         self.conv2  = nn.Conv2d(64,64,3,padding=(1,1))
         self.conv3  = nn.Conv2d(64,128,3,padding=(1,1))
@@ -189,7 +195,7 @@ class VGG(nn.Module):
         x = torch.cat((x,padding),2)
         padding = Variable(torch.zeros(4,256,8,1))
         x = torch.cat((x,padding),3)
-        x = self.pool(x)
+        x = self.adpool(x)
         x = self.conv8(x)
         x = F.relu(nn.BatchNorm2d(512)(x))
         x = self.conv9(x)
@@ -234,47 +240,36 @@ class MLP(nn.Module):
 
 
 
+def train(model,optimizer,criterion,x,y):
+    #x = []
+    #y = []
+    #for e in range(epoch):
+    #print(e)
+    running_loss = 0.0
+    for i, data in enumerate(train_loader, 0):
+        inputs, labels = data
+        optimizer.zero_grad()
 
-
-
-
-def create_optimizer(lr,cnn,momentum):
-    #return torch.optim.Adadelta(cnn.parameters(),lr)
-    #return torch.optim.Rprop(cnn.parameters(),lr)
-    #return optim.SGD(cnn.parameters(),lr,momentum)
-    return optim.Adam(cnn.parameters(),lr)
-
-'''
-# Runs the training loop for 'epoch' number of times
-def train(model,epoch,optimizer,criterion):
-    x = []
-    y = []
-    for e in range(epoch):
-        print(e)
-        running_loss = 0.0
-        for i, data in enumerate(train_loader, 0):
-            inputs, labels = data
-            optimizer.zero_grad()
-
-            outputs = model(inputs)
-            labels = labels.long()
-            loss = criterion(outputs, labels)
-            running_loss += loss.item()
-            loss.backward() 
-            optimizer.step()
-        print(running_loss/len(train_loader))
-        x.append(e)
-        y.append(running_loss/len(train_loader))
+        outputs = model(inputs)
+        labels = labels.long()
+        loss = criterion(outputs, labels)
+        running_loss += loss.item()
+        loss.backward()
+        optimizer.step()
+    #print(running_loss/len(train_loader))
+    x.append(len(x) + 1)
+    y.append(running_loss/len(train_loader))
 
 
     #plot_loss(x,y)
 
-    print('Finished training')
-    return [x,y]
+    #print('Finished training')
+    #return [x,y]
 
-'''
 
-def train(frame, *fargs):
+
+# Runs the training loop for 'epoch' number of times
+def add_loss_point(frame, *fargs):
 
     model = fargs[0]
     optimizer = fargs[1]
@@ -308,16 +303,19 @@ def train(frame, *fargs):
 
 
 # Compares the output from the network against the test data to assess accuracy
-def test(model):
+def test(model,criterion,x,y):
     correct = 0
     total = 0
     class_correct = list(0. for i in range(10))
     class_total = list(0. for i in range(10))
+    running_loss = 0.0
 
     with torch.no_grad():
         for data in test_loader:
             images,labels = data
             outputs = model(images)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item()
             labels = labels.long()
             _, predicted = torch.max(outputs.data, 1)
             c = (predicted == labels).squeeze()
@@ -327,12 +325,17 @@ def test(model):
                 class_correct[label] += c[i].item()
                 class_total[label] += 1
 
+        x.append(len(x) + 1)
+        y.append(running_loss/len(test_loader))
+'''
     accuarcies =[]
     for i in range(10):
         accuarcies.append(100 * class_correct[i] /class_total [i])
         #print('Accuracy of class %d was: %d %%' %(i,(100 * class_correct[i] / class_total[i])))
     #print('Accuracy of network on the 10000 test images: %d %%' %(100 * correct / total))
     return accuarcies
+
+'''
 
 def plot_loss(xVals, yVals):
 
@@ -348,31 +351,47 @@ def init():
     return ln,
 
 
-model = VGG()
-optimizer = create_optimizer(0.0001, model, 0.8)
+model = ResNet(Block,[2,2,2,2],10)
+optimizer = optim.Adamax(model.parameters(),0.0001)
+#optimizer = optim.Adadelta(model.parameters(), 0.0001)
+#optimizer = optim.SGD(model.parameters(),0.0001,0.8)
+#optimizer = create_optimizer(0.0001, model, 0.8)
 criterion = nn.CrossEntropyLoss()
-x = enumerate(train_loader)
 #train(model,1,optimizer,criterion)
-print(len(list(x)))
-
-args = (model, optimizer, criterion, xData, yData, list(enumerate(train_loader)))
-ani = FuncAnimation(fig, train, frames= range(2500), fargs=args, init_func=init, blit=True )
-plt.show()
-'''
-
-
-'''
-
-
-def run_model(model,loss_vals, acc_values,lr,momentum,criter):
-    opt = create_optimizer(lr,model,momentum)
-    loss_vals.append(train(model,10,opt,criter))
-    acc_values.append(test(model))
 
 
 
+def show_loss():
+    args = (model, optimizer, criterion, xData, yData, list(enumerate(train_loader)))
+    ani = FuncAnimation(fig, add_loss_point, frames=range(2500), fargs=args, init_func=init, blit=True)
+    plt.show()
 
 
+def run_model(model,epoch):
+    test_loss_x = []
+    test_loss_y = []
+    train_loss_x = []
+    train_loss_y = []
+    opt = optim.SGD(model.parameters(), 0.001,0.8)
+    for e in range(epoch):
+        print(e)
+        train(model,opt,criterion,train_loss_x,train_loss_y)
+        test(model,criterion,test_loss_x,test_loss_y)
+
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+    plt.plot(train_loss_x,train_loss_y)
+    plt.savefig('Graphs/resnet_pert_train_loss.png')
+    plt.gcf().clear()
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+    plt.plot(test_loss_x,test_loss_y)
+    plt.savefig('Graphs/resnet_pert_test_loss.png')
+
+
+
+
+run_model(model,10)
 
 
     
@@ -380,7 +399,7 @@ def run_model(model,loss_vals, acc_values,lr,momentum,criter):
 
 
 
-
+'''
 
 
 
@@ -389,41 +408,14 @@ def run_model(model,loss_vals, acc_values,lr,momentum,criter):
 losses = []
 accuracies = []
 criterion = nn.CrossEntropyLoss()
-#criterion = F.nll_loss()
-#criterion = nn.NLLLoss()
-#criterion = nn.KLDivLoss()
-#print(torch.cuda.get_device_name(0))
 
 lr = 0.001
 momentum = 0.8
-run_model(LeNet(), losses, accuracies, lr, momentum, criterion)
-print('here')
+#run_model(LeNet(), losses, accuracies, lr, momentum, criterion)
 #run_model(MLP(), losses, accuracies, lr, momentum, criterion)
 #run_model(ResNet(Block,[2,2,2,2],10), losses, accuracies, lr, momentum, criterion)
 #run_model(LeNet(), losses, accuracies, lr, momentum, criterion)
 
-'''
-model = LeNet()
-optimizer = create_optimizer(lr, model, momentum)
-losses.append(train(model, 10 ,optimizer,criterion))
-accuracies.append(test(model))
-
-model = MLP()
-optimizer = create_optimizer(lr, model, momentum)
-losses.append(train(model, 10 ,optimizer,criterion))
-accuracies.append(test(model))
-
-model = ResNet(Block,[2,2,2,2],10)
-optimizer = create_optimizer(lr, model, momentum)
-losses.append(train(model, 10 ,optimizer,criterion))
-accuracies.append(test(model))
-
-model = VGG()
-optimizer = create_optimizer(lr, model, momentum)
-losses.append(train(model, 10 ,optimizer,criterion))
-accuracies.append(test(model))
-
-'''
 
 plt.xlabel('epoch')
 plt.ylabel('loss')
@@ -450,3 +442,4 @@ plt.savefig('Graphs/originalAccuracy.png')
 #plt.show()
 
 
+'''
