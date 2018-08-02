@@ -8,8 +8,8 @@ import torch.optim as optim
 from torchvision.utils import save_image
 
 #Load in the training and testing images
-mnist_trainset = CustomMNIST(root='./data/modified_mnist',train=True,process=True,transform=transforms.Compose([transforms.ToTensor()]))
-mnist_testset = CustomMNIST(root='./data/modified_mnist',train=False,process=True,transform=transforms.Compose([transforms.ToTensor()]))
+mnist_trainset = CustomMNIST(root='./data/original_mnist',train=True,process=True,transform=transforms.Compose([transforms.ToTensor()]))
+mnist_testset = CustomMNIST(root='./data/original_mnist',train=False,process=True,transform=transforms.Compose([transforms.ToTensor()]))
 
 #Initialise the data loaders for training and testing
 train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=4, shuffle=True)
@@ -26,11 +26,11 @@ class VAE(nn.Module):
 
     def __init__(self):
         super(VAE, self).__init__()
-        self.fc1  = nn.Linear(784,200)
-        self.mean = nn.Linear(200,40)
-        self.sd   = nn.Linear(200,40)
-        self.fc2  = nn.Linear(40,200)
-        self.fc3  = nn.Linear(200,784)
+        self.fc1  = nn.Linear(784,500)
+        self.mean = nn.Linear(500,30)
+        self.sd   = nn.Linear(500,30)
+        self.fc2  = nn.Linear(30,500)
+        self.fc3  = nn.Linear(500,784)
 
     def encode(self, x):
         y = F.relu(self.fc1(x))
@@ -54,6 +54,7 @@ class VAE(nn.Module):
 
 
 def calculate_loss(original, reconstructed, mean, sd):
+    original = original.view(4,784)
     recon_loss = F.binary_cross_entropy(reconstructed,original)
     KLD = -0.5 * torch.sum( 1 - mean.pow(2) + (sd.pow(2)).log() - sd.pow(2))
     return recon_loss + KLD
@@ -84,14 +85,14 @@ def test(epoch):
                 save_image(compare.cpu(),'Graphs/reconstruction' + str(epoch) + '.png', nrow=n)
 
 
-for i in range(1,10):
+for i in range(1,11):
     print(i)
     train(i)
     test(i)
     with torch.no_grad():
-        sample = torch.rand(30,20)
+        sample = torch.rand(64,30)
         sample = model.decode(sample)
-        save_image(sample.view(30,1,28,28), 'Graphs/sample ' + str(i) + '.png')
+        save_image(sample.view(64,1,28,28), 'Graphs/sample ' + str(i) + '.png')
 
 
 
