@@ -53,10 +53,12 @@ class VAE(nn.Module):
 
 
 
-def calculate_loss(original, reconstructed, mean, sd):
+def calculate_loss(original, reconstructed, mean, log_var):
     original = original.view(4,784)
     recon_loss = F.binary_cross_entropy(reconstructed,original)
-    KLD = -0.5 * torch.sum( 1 - mean.pow(2) + (sd.pow(2)).log() - sd.pow(2))
+    print(log_var)
+    print(log_var.exp())
+    KLD = -0.5 * torch.sum( 1 - mean.pow(2) + log_var - log_var.exp())
     return recon_loss + KLD
 
 
@@ -84,7 +86,9 @@ def test(epoch):
                 compare = torch.cat([original[:n], recon.view(4,1,28,28)[:n]])
                 save_image(compare.cpu(),'Graphs/reconstruction' + str(epoch) + '.png', nrow=n)
 
-
+x = torch.tensor([10,20,30])
+print(x)
+#print(x.log())
 for i in range(1,11):
     print(i)
     train(i)
