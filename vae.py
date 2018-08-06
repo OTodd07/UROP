@@ -12,8 +12,8 @@ mnist_trainset = CustomMNIST(root='./data/original_mnist',train=True,process=Tru
 mnist_testset = CustomMNIST(root='./data/original_mnist',train=False,process=True,transform=transforms.Compose([transforms.ToTensor()]))
 
 #Initialise the data loaders for training and testing
-train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=4, shuffle=True)
-test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=4, shuffle=True)
+train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=128, shuffle=True)
+test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=128, shuffle=True)
 
 def flatten_tensor(x):
     length = 1
@@ -26,6 +26,7 @@ class VAE(nn.Module):
 
     def __init__(self):
         super(VAE, self).__init__()
+        self.training = True
         self.fc1  = nn.Linear(784,500)
         self.mean = nn.Linear(500,30)
         self.sd   = nn.Linear(500,30)
@@ -42,7 +43,10 @@ class VAE(nn.Module):
     def reparameterise(self, mean, sd):
         distr = Normal(0,1)
         e = distr.sample()
-        return mean + e * sd
+        if self.training:
+            return e.mul(torch.exp(0.5*sd)).add(mean)
+
+        return mean
 
     def forward(self,x):
         x = flatten_tensor(x)
@@ -54,18 +58,15 @@ class VAE(nn.Module):
 
 
 def calculate_loss(original, reconstructed, mean, log_var):
-    original = original.view(4,784)
-    recon_loss = F.binary_cross_entropy(reconstructed,original)
-    print(log_var)
-    print(log_var.exp())
+    recon_loss = F.binary_cross_entropy(reconstructed, original.view(-1,784), size_average=False)
     KLD = -0.5 * torch.sum( 1 - mean.pow(2) + log_var - log_var.exp())
     return recon_loss + KLD
-
 
 model = VAE()
 optimizer = optim.Adamax(model.parameters(),0.0001)
 
 def train(epoch):
+    model.training = True
     running_loss = 0.0
     for i , (original, _) in enumerate(train_loader):
         recon, mean, sd = model(original)
@@ -73,8 +74,10 @@ def train(epoch):
         running_loss += loss.item()
         loss.backward()
         optimizer.step()
+    print(running_loss/len(train_loader))
 
 def test(epoch):
+    model.training = False
     running_loss = 0.0
     with torch.no_grad():
         for i, (original,_) in enumerate(test_loader):
@@ -83,17 +86,12 @@ def test(epoch):
             running_loss += loss.item()
             if i == 0:
                 n = min(original.size(0), 4)
-                compare = torch.cat([original[:n], recon.view(4,1,28,28)[:n]])
+                compare = torch.cat([original[:n], recon.view(128,1,28,28)[:n]])
                 save_image(compare.cpu(),'Graphs/reconstruction' + str(epoch) + '.png', nrow=n)
 
-x = torch.tensor([[10],[20]])
-print(x)
-print(x.size())
-y = x.squeeze()
-print(y.size())
-print(y)
-#print(x.log())
-for i in range(1,11):
+        print(running_loss/len(test_loader))
+
+for i in range(1,200):
     print(i)
     train(i)
     test(i)
