@@ -86,8 +86,12 @@ def test(epoch):
                 compare = torch.cat([original[:n], recon.view(4,1,28,28)[:n]])
                 save_image(compare.cpu(),'Graphs/reconstruction' + str(epoch) + '.png', nrow=n)
 
-x = torch.tensor([10,20,30])
+x = torch.tensor([[10],[20]])
 print(x)
+print(x.size())
+y = x.squeeze()
+print(y.size())
+print(y)
 #print(x.log())
 for i in range(1,11):
     print(i)
