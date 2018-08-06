@@ -351,12 +351,10 @@ def init():
     return ln,
 
 
-model = ResNet(Block,[2,2,2,2],10)
-optimizer = optim.Adamax(model.parameters(),0.0001)
+#optimizer = optim.Adamax(model.parameters(),0.0001)
 #optimizer = optim.Adadelta(model.parameters(), 0.0001)
 #optimizer = optim.SGD(model.parameters(),0.0001,0.8)
 #optimizer = create_optimizer(0.0001, model, 0.8)
-criterion = nn.CrossEntropyLoss()
 #train(model,1,optimizer,criterion)
 
 
@@ -367,12 +365,13 @@ def show_loss():
     plt.show()
 
 
-def run_model(model,epoch):
+def run_model(model,epoch,name):
     test_loss_x = []
     test_loss_y = []
     train_loss_x = []
     train_loss_y = []
-    opt = optim.SGD(model.parameters(), 0.001,0.8)
+    opt = optim.SGD(model.parameters(), 0.0001,0.8)
+    criterion = nn.CrossEntropyLoss()
     for e in range(epoch):
         print(e)
         train(model,opt,criterion,train_loss_x,train_loss_y)
@@ -381,18 +380,34 @@ def run_model(model,epoch):
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.plot(train_loss_x,train_loss_y)
-    plt.savefig('Graphs/resnet_pert_train_loss.png')
-    plt.gcf().clear()
+    plt.savefig('Graphs/discriminator/' + name + 'pert_train_loss.png')
+    plt.clf()
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.plot(test_loss_x,test_loss_y)
-    plt.savefig('Graphs/resnet_pert_test_loss.png')
+    plt.savefig('Graphs/discriminator/' + name + 'pert_test_loss.png')
+    plt.clf()
 
+'''
 
+x = range(0,100)
+y = x
+print(x)
+print(y)
+plt.plot(x,y)
+plt.savefig('Graphs/linear.png')
+plt.clf()
+y = np.square(x)
+plt.plot(x,y)
+plt.savefig('Graphs/quadratic.png')
+'''
 
-
-run_model(model,10)
-
+model = LeNet()
+run_model(model,40,'lenet')
+model = MLP()
+run_model(model,40,'mlp')
+#model = ResNet(Block,[2,2,2,2],10)
+#run_model(model,40,'resnet')
 
     
 

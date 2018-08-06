@@ -12,8 +12,8 @@ mnist_trainset = CustomMNIST(root='./data/original_mnist',train=True,process=Tru
 mnist_testset = CustomMNIST(root='./data/original_mnist',train=False,process=True,transform=transforms.Compose([transforms.ToTensor()]))
 
 #Initialise the data loaders for training and testing
-train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=128, shuffle=True)
-test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=128, shuffle=True)
+train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=100, shuffle=True)
+test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=100, shuffle=True)
 
 def flatten_tensor(x):
     length = 1
@@ -41,10 +41,11 @@ class VAE(nn.Module):
         return F.sigmoid(self.fc3(F.relu(self.fc2(z))))
 
     def reparameterise(self, mean, sd):
-        distr = Normal(0,1)
-        e = distr.sample()
+        #distr = Normal(0,1)
         if self.training:
-            return e.mul(torch.exp(0.5*sd)).add(mean)
+            std = torch.exp(0.5*sd)
+            e = torch.randn_like(sd)
+            return e.mul(std).add(mean)
 
         return mean
 
@@ -82,12 +83,14 @@ def test(epoch):
     with torch.no_grad():
         for i, (original,_) in enumerate(test_loader):
             recon, mean, sd = model(original)
+            #print(recon.size())
+            #print(original.size())
             loss = calculate_loss(original,recon,mean,sd)
             running_loss += loss.item()
-            if i == 0:
-                n = min(original.size(0), 4)
-                compare = torch.cat([original[:n], recon.view(128,1,28,28)[:n]])
-                save_image(compare.cpu(),'Graphs/reconstruction' + str(epoch) + '.png', nrow=n)
+            if i == len(test_loader) - 1:
+                n = min(original.size(0),8)
+                compare = torch.cat([original[:n], recon.view(100,1,28,28)[:n]])
+                save_image(compare.cpu(),'Graphs/vae/reconstruction' + str(epoch) + '.png', nrow=n)
 
         print(running_loss/len(test_loader))
 
@@ -95,10 +98,11 @@ for i in range(1,200):
     print(i)
     train(i)
     test(i)
-    with torch.no_grad():
-        sample = torch.rand(64,30)
-        sample = model.decode(sample)
-        save_image(sample.view(64,1,28,28), 'Graphs/sample ' + str(i) + '.png')
+    if (i % 50 == 0):
+        with torch.no_grad():
+            sample = torch.rand(64,30)
+            sample = model.decode(sample)
+            save_image(sample.view(64,1,28,28), 'Graphs/vae/sample ' + str(i) + '.png')
 
 
 

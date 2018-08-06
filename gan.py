@@ -91,8 +91,9 @@ for epoch in range(100):
         G_Err = criterion(out,label)
         G_Err.backward()
         optimizer_G.step()
-        fake = net_G(fixed_noise)
-        save_image(fake.detach(), 'C:\\Users\\omar_\\Documents\\UROP-2018\\Graphs\\gan\\fake_sample' + str(epoch) + '.png')
+
+    fake = net_G(fixed_noise)
+    save_image(fake.detach(), 'Graphs/gan/fake_sample' + str(epoch) + '.png')
 
 
 
