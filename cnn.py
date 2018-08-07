@@ -380,12 +380,12 @@ def run_model(model,epoch,name):
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.plot(train_loss_x,train_loss_y)
-    plt.savefig('Graphs/discriminator/' + name + 'pert_train_loss.png')
+    plt.savefig('Graphs/discriminator/' + name + 'train_loss.png')
     plt.clf()
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.plot(test_loss_x,test_loss_y)
-    plt.savefig('Graphs/discriminator/' + name + 'pert_test_loss.png')
+    plt.savefig('Graphs/discriminator/' + name + '_test_loss.png')
     plt.clf()
 
 '''
@@ -402,10 +402,10 @@ plt.plot(x,y)
 plt.savefig('Graphs/quadratic.png')
 '''
 
-model = LeNet()
-run_model(model,40,'lenet')
+#model = LeNet()
+#run_model(model,40,'lenet')
 model = MLP()
-run_model(model,40,'mlp')
+run_model(model,20,'mlp')
 #model = ResNet(Block,[2,2,2,2],10)
 #run_model(model,40,'resnet')
 
