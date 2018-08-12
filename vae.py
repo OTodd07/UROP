@@ -27,11 +27,11 @@ class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
         self.training = True
-        self.fc1  = nn.Linear(784,500)
-        self.mean = nn.Linear(500,30)
-        self.sd   = nn.Linear(500,30)
-        self.fc2  = nn.Linear(30,500)
-        self.fc3  = nn.Linear(500,784)
+        self.fc1  = nn.Linear(784,400)
+        self.mean = nn.Linear(400,20)
+        self.sd   = nn.Linear(400,20)
+        self.fc2  = nn.Linear(20,400)
+        self.fc3  = nn.Linear(400,784)
 
     def encode(self, x):
         y = F.relu(self.fc1(x))
@@ -45,7 +45,7 @@ class VAE(nn.Module):
         if self.training:
             std = torch.exp(0.5*sd)
             e = torch.randn_like(sd)
-            return e.mul(std).add(mean)
+            return e.mul(std).add_(mean)
 
         return mean
 
@@ -60,16 +60,19 @@ class VAE(nn.Module):
 
 def calculate_loss(original, reconstructed, mean, log_var):
     recon_loss = F.binary_cross_entropy(reconstructed, original.view(-1,784), size_average=False)
-    KLD = -0.5 * torch.sum( 1 - mean.pow(2) + log_var - log_var.exp())
-    return recon_loss + KLD
+    #KLD = -0.5 * torch.sum( 1 - mean.pow(2) + log_var - log_var.exp())
+    return recon_loss
+    #return recon_loss + KLD
 
 model = VAE()
-optimizer = optim.Adamax(model.parameters(),0.0001)
+optimizer = optim.Adam(model.parameters(),lr=1e-3)
 
 def train(epoch):
+    model.train()
     model.training = True
     running_loss = 0.0
     for i , (original, _) in enumerate(train_loader):
+        optimizer.zero_grad()
         recon, mean, sd = model(original)
         loss = calculate_loss(original,recon,mean,sd)
         running_loss += loss.item()
@@ -79,6 +82,7 @@ def train(epoch):
 
 def test(epoch):
     model.training = False
+    model.eval()
     running_loss = 0.0
     with torch.no_grad():
         for i, (original,_) in enumerate(test_loader):
@@ -90,11 +94,11 @@ def test(epoch):
             if i == len(test_loader) - 1:
                 n = min(original.size(0),8)
                 compare = torch.cat([original[:n], recon.view(100,1,28,28)[:n]])
-                save_image(compare.cpu(),'Graphs/vae/reconstruction' + str(epoch) + '.png', nrow=n)
+                save_image(compare.cpu(),'Graphs/vaeMod/reconstruction' + str(epoch) + '.png', nrow=n)
 
         print(running_loss/len(test_loader))
 
-for i in range(1,200):
+for i in range(1,10):
     print(i)
     train(i)
     test(i)
@@ -102,7 +106,7 @@ for i in range(1,200):
         with torch.no_grad():
             sample = torch.rand(64,30)
             sample = model.decode(sample)
-            save_image(sample.view(64,1,28,28), 'Graphs/vae/sample ' + str(i) + '.png')
+            save_image(sample.view(64,1,28,28), 'Graphs/vaeMod/sample ' + str(i) + '.png')
 
 
 

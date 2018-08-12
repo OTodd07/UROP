@@ -17,12 +17,16 @@ import numpy as np
 
 #mnist_trainset = datasets.MNIST(root='./data/original_mnist', train=True, download=True, transform=transforms.Compose([transforms.ToTensor()]))
 #mnist_testset  = datasets.MNIST(root='./data/original_mnist', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
-mnist_trainset = CustomMNIST(root='./data/modified_mnist',train=True,process=True,transform=transforms.Compose([transforms.ToTensor()]))
-mnist_testset = CustomMNIST(root='./data/modified_mnist',train=False,process=True,transform=transforms.Compose([transforms.ToTensor()]))
+#mnist_trainset = CustomMNIST(root='./data/modified_mnist',train=True,process=True,transform=transforms.Compose([transforms.ToTensor()]))
+#mnist_testset = CustomMNIST(root='./data/modified_mnist',train=False,process=True,transform=transforms.Compose([transforms.ToTensor()]))
+
+
 
 #Initialise the data loaders for training and testing
-train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=4, shuffle=True)
-test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=4, shuffle=True)
+#train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=4, shuffle=True)
+#test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=4, shuffle=True)
+#train_loader = None
+#test_loader = None
 
 fig, ax = plt.subplots()
 xData, yData = [] ,[]
@@ -31,9 +35,12 @@ ln, = plt.plot([],[], animated=True)
 
 # Create MNIST datasets
 
-def init_datasets(root):
-    mnist_trainset = CustomMNIST(root=root, train=True, process=True, transform=transforms.Compose([transforms.ToTensor()]))
-    mnist_testset = CustomMNIST(root=root, train=False, process=True, transform=transforms.Compose([transforms.ToTensor()]))
+def init_datasets(root,patho):
+    mnist_trainset = CustomMNIST(root=root, train=True, process=True, patho=patho, transform=transforms.Compose([transforms.ToTensor()]))
+    mnist_testset = CustomMNIST(root=root, train=False, process=True, patho=patho, transform=transforms.Compose([transforms.ToTensor()]))
+    train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=4, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(mnist_testset,batch_size=4, shuffle=True)
+    return train_loader,test_loader
 
 
 #Resize tensor to appropriate shape to be compatible with fc layer
@@ -62,6 +69,9 @@ class LeNet(nn.Module):
         x = self.fc2(x)
         return x
 
+    def __str__(self):
+        return 'lenet'
+
 
 
 
@@ -80,6 +90,9 @@ class ResNet(nn.Module):
         self.comp4 = self.create_component(block, 512, stacks[3], 2 )
         self.avgpool = nn.AvgPool2d((2,2), stride=1)
         self.fc = nn.Linear(512,num_classes)
+
+    def __str__(self):
+        return 'resnet'
 
 
     def create_component(self,block,out_planes,num_blocks,stride=1):
@@ -237,10 +250,15 @@ class MLP(nn.Module):
         x = F.softmax(x, dim = 0)
         return x
 
+    def __str__(self):
+        return 'mlp'
 
 
 
-def train(model,optimizer,criterion,x,y):
+
+
+
+def train(model,optimizer,criterion,x,y,train_loader):
     #x = []
     #y = []
     #for e in range(epoch):
@@ -275,7 +293,7 @@ def add_loss_point(frame, *fargs):
     optimizer = fargs[1]
     criterion = fargs[2]
     running_loss = 0.0
-    x = train_loader
+    #x = train_loader
     y = 0
 
     #for i, data in enumerate(train_loader, 0):
@@ -303,7 +321,7 @@ def add_loss_point(frame, *fargs):
 
 
 # Compares the output from the network against the test data to assess accuracy
-def test(model,criterion,x,y):
+def test(model,criterion,x,y,accuracy,test_loader):
     correct = 0
     total = 0
     class_correct = list(0. for i in range(10))
@@ -319,12 +337,16 @@ def test(model,criterion,x,y):
             labels = labels.long()
             _, predicted = torch.max(outputs.data, 1)
             c = (predicted == labels).squeeze()
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
 
             for i in range(4):
                 label = labels[i]
                 class_correct[label] += c[i].item()
                 class_total[label] += 1
 
+        if (accuracy):
+            return 100 * correct / total
         x.append(len(x) + 1)
         y.append(running_loss/len(test_loader))
 '''
@@ -359,13 +381,16 @@ def init():
 
 
 
-def show_loss():
-    args = (model, optimizer, criterion, xData, yData, list(enumerate(train_loader)))
+def show_loss(model):
+    loaders = init_datasets('./data/modified_mnist',False)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adamax(model.parameters(),0.0001)
+    args = (model, optimizer, criterion, xData, yData, list(enumerate(loaders[0])))
     ani = FuncAnimation(fig, add_loss_point, frames=range(2500), fargs=args, init_func=init, blit=True)
     plt.show()
 
 
-def run_model(model,epoch,name):
+def run_model(model,epoch,loaders):
     test_loss_x = []
     test_loss_y = []
     train_loss_x = []
@@ -374,42 +399,102 @@ def run_model(model,epoch,name):
     criterion = nn.CrossEntropyLoss()
     for e in range(epoch):
         print(e)
-        train(model,opt,criterion,train_loss_x,train_loss_y)
-        test(model,criterion,test_loss_x,test_loss_y)
+        train(model,opt,criterion,train_loss_x,train_loss_y,loaders[0])
+        test(model,criterion,test_loss_x,test_loss_y,False,loaders[1])
 
+    return test_loss_x,test_loss_y,train_loss_x,train_loss_y
+
+
+    '''
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.plot(train_loss_x,train_loss_y)
-    plt.savefig('Graphs/discriminator/' + name + 'train_loss.png')
+    plt.savefig('Graphs/discriminator/' + name + 'pert_train_loss.png')
     plt.clf()
     plt.xlabel('epoch')
     plt.ylabel('loss')
     plt.plot(test_loss_x,test_loss_y)
-    plt.savefig('Graphs/discriminator/' + name + '_test_loss.png')
+    plt.savefig('Graphs/discriminator/' + name + 'pert_test_loss.png')
     plt.clf()
+    '''
 
 '''
-
 x = range(0,100)
 y = x
 print(x)
 print(y)
-plt.plot(x,y)
-plt.savefig('Graphs/linear.png')
-plt.clf()
+plt.figure(0)
+plt.plot(x,y,label='Linear')
+plt.legend(loc='best')
+#plt.savefig('Graphs/linear.png')
+#plt.clf()
 y = np.square(x)
-plt.plot(x,y)
+plt.figure(1)
+plt.plot(x,y,label='Quadratic')
+
+plt.legend(loc='best')
+
+plt.figure(0)
+plt.savefig('Graphs/linear.png')
+plt.figure(1)
 plt.savefig('Graphs/quadratic.png')
 '''
 
+names = ['pert_classification', 'digit_classificaiton_pert', 'digit_classification_norm' ]
+models = [LeNet(), MLP(), ResNet(Block,[2,2,2,2],10)]
+roots = ['./data/modified_mnist','./data/modified_mnist','./data/original_mnist']
+pathos = [True,False,False]
+data = []
+f = open('Graphs/discriminator/accuracies.txt','a')
+
+for i in range(3):
+    loaders = init_datasets(roots[i],pathos[i])
+
+    data.append(run_model(models[0], 5,loaders))
+    data.append(run_model(models[1],5,loaders))
+    #data.append(run_model(models[2],50))
+    plt.figure(i * 2)
+    for j in range(2):
+        plt.plot(data[j][0],data[j][1], label=str(models[j]))
+
+    plt.legend(loc='best')
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+    plt.savefig('Graphs/discriminator/' + names[i] + "_test_loss.png")
+
+    plt.figure(i * 2 + 1)
+    for j in range(2):
+        plt.plot(data[j][2],data[j][3], label=str(models[j]))
+
+    plt.legend(loc='best')
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+    plt.savefig('Graphs/discriminator/' + names[i] + "_train_loss.png")
+
+    accuracies = []
+    criterion = nn.CrossEntropyLoss()
+
+    for j in range(2):
+        accuracy = test(models[j],criterion,[],[],True,loaders[1])
+        f.write(str(models[j]) + ' :    ' + str(accuracy))
+
+    f.write('\n')
+
+
+f.close()
+
 #model = LeNet()
-#run_model(model,40,'lenet')
-model = MLP()
-run_model(model,20,'mlp')
+#show_loss(model)
+#run_model(model,20,'lenet')
+#model = MLP()
+#run_model(model,40,'mlp')
 #model = ResNet(Block,[2,2,2,2],10)
 #run_model(model,40,'resnet')
 
-    
+#for i in range(3):
+
+
+
 
 
 

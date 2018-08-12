@@ -15,7 +15,8 @@ class CustomMNIST(data.Dataset):
     training_file = 'training.pt'
     test_file = 'test.pt'
 
-    def __init__(self,root,transform=None,process=True,train=True):
+    def __init__(self,root,transform=None,process=True,train=True,patho=False):
+        self.patho = patho
         self.root = os.path.expanduser(root)
         self.train = train
         self.transform = transform
@@ -56,8 +57,6 @@ class CustomMNIST(data.Dataset):
 
     def process(self):
 
-
-
         '''
 
         mndata = MNIST(os.path.join(self.root,self.raw_folder), return_type='numpy')
@@ -65,16 +64,21 @@ class CustomMNIST(data.Dataset):
         self.train_data, self.test_labels = mndata.load_training()
         '''
 
-
+        if self.patho:
+            train_labels = 'train-patho-idx1-ubyte'
+            test_labels  = 't10k-patho-idx1-ubyte'
+        else:
+            train_labels = 'train-labels-idx1-ubyte'
+            test_labels  = 't10k-labels-idx1-ubyte'
 
         training_set = (
             read_image_file(os.path.join(self.root, self.raw_folder, 'train-images-idx3-ubyte')),
-            read_label_file(os.path.join(self.root, self.raw_folder, 'train-labels-idx1-ubyte'))
+            read_label_file(os.path.join(self.root, self.raw_folder, train_labels))
 
         )
         test_set = (
             read_image_file(os.path.join(self.root, self.raw_folder, 't10k-images-idx3-ubyte')),
-            read_label_file(os.path.join(self.root, self.raw_folder, 't10k-labels-idx1-ubyte'))
+            read_label_file(os.path.join(self.root, self.raw_folder, test_labels))
         )
 
 
