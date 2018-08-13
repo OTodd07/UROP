@@ -28,6 +28,8 @@ import numpy as np
 #train_loader = None
 #test_loader = None
 
+device = torch.device("cuda:0")
+
 fig, ax = plt.subplots()
 xData, yData = [] ,[]
 ln, = plt.plot([],[], animated=True)
@@ -61,7 +63,24 @@ class LeNet(nn.Module):
         self.fc1    = nn.Linear(20* 4 * 4, 50)
         self.fc2    = nn.Linear(50,10)
 
+        self.convlayers = nn.Sequential(
+            nn.Conv2d(1,10,5),
+            nn.ReLU(),
+            nn.MaxPool2d(2,2),
+            nn.Conv2d(10,20,5),
+            nn.ReLU(),
+            nn.MaxPool2d(2,2),
+        )
+
+        self.fc  = nn.Sequential(
+            nn.Linear(20* 4 * 4, 50),
+            nn.ReLU(),
+            nn.Linear(50,10)
+        )
+
     def forward(self, x):
+        '''
+
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = flatten_tensor(x)
@@ -69,10 +88,15 @@ class LeNet(nn.Module):
         x = self.fc2(x)
         return x
 
+<<<<<<< Updated upstream
+        '''
+        output =  nn.parallel.data_parallel(self.convlayers, x, range(1))
+        output = flatten_tensor(output)
+        return nn.parallel.data_parallel(self.fc, output, range(1))
+
+
     def __str__(self):
         return 'lenet'
-
-
 
 
 class ResNet(nn.Module):
@@ -268,8 +292,8 @@ def train(model,optimizer,criterion,x,y,train_loader):
         inputs, labels = data
         optimizer.zero_grad()
 
-        outputs = model(inputs)
-        labels = labels.long()
+        outputs = model(inputs.to(device))
+        labels = labels.to(device)
         loss = criterion(outputs, labels)
         running_loss += loss.item()
         loss.backward()
@@ -331,10 +355,10 @@ def test(model,criterion,x,y,accuracy,test_loader):
     with torch.no_grad():
         for data in test_loader:
             images,labels = data
-            outputs = model(images)
-            loss = criterion(outputs, labels)
+            outputs = model(images.to(device))
+            loss = criterion(outputs, labels.to(device))
             running_loss += loss.item()
-            labels = labels.long()
+            labels = labels.to(device)
             _, predicted = torch.max(outputs.data, 1)
             c = (predicted == labels).squeeze()
             total += labels.size(0)
@@ -390,6 +414,7 @@ def show_loss(model):
     plt.show()
 
 
+
 def run_model(model,epoch,loaders):
     test_loss_x = []
     test_loss_y = []
@@ -399,8 +424,8 @@ def run_model(model,epoch,loaders):
     criterion = nn.CrossEntropyLoss()
     for e in range(epoch):
         print(e)
-        train(model,opt,criterion,train_loss_x,train_loss_y,loaders[0])
-        test(model,criterion,test_loss_x,test_loss_y,False,loaders[1])
+        train(model.to(device),opt,criterion,train_loss_x,train_loss_y,loaders[0])
+        test(model.to(device),criterion,test_loss_x,test_loss_y,False,loaders[1])
 
     return test_loss_x,test_loss_y,train_loss_x,train_loss_y
 
@@ -445,16 +470,17 @@ models = [LeNet(), MLP(), ResNet(Block,[2,2,2,2],10)]
 roots = ['./data/modified_mnist','./data/modified_mnist','./data/original_mnist']
 pathos = [True,False,False]
 data = []
-f = open('Graphs/discriminator/accuracies.txt','a')
 
 for i in range(3):
+    f = open('Graphs/discriminator/accuracies.txt','a')
+
     loaders = init_datasets(roots[i],pathos[i])
 
-    data.append(run_model(models[0], 5,loaders))
-    data.append(run_model(models[1],5,loaders))
-    #data.append(run_model(models[2],50))
+    data.append(run_model(models[0], 40,loaders))
+    data.append(run_model(models[1],40,loaders))
+    data.append(run_model(models[2],40,loaders))
     plt.figure(i * 2)
-    for j in range(2):
+    for j in range(3):
         plt.plot(data[j][0],data[j][1], label=str(models[j]))
 
     plt.legend(loc='best')
@@ -463,7 +489,7 @@ for i in range(3):
     plt.savefig('Graphs/discriminator/' + names[i] + "_test_loss.png")
 
     plt.figure(i * 2 + 1)
-    for j in range(2):
+    for j in range(3):
         plt.plot(data[j][2],data[j][3], label=str(models[j]))
 
     plt.legend(loc='best')
@@ -471,17 +497,18 @@ for i in range(3):
     plt.ylabel('loss')
     plt.savefig('Graphs/discriminator/' + names[i] + "_train_loss.png")
 
+    data = []
     accuracies = []
     criterion = nn.CrossEntropyLoss()
 
-    for j in range(2):
+    for j in range(3):
         accuracy = test(models[j],criterion,[],[],True,loaders[1])
-        f.write(str(models[j]) + ' :    ' + str(accuracy))
+        f.write(str(models[j]) + ' : ' + str(accuracy) + '\n')
 
     f.write('\n')
+    f.close()
 
 
-f.close()
 
 #model = LeNet()
 #show_loss(model)
@@ -489,6 +516,13 @@ f.close()
 #model = MLP()
 #run_model(model,40,'mlp')
 #model = ResNet(Block,[2,2,2,2],10)
+#run_model(model,40,'resnet')
+#print(device)
+#model = LeNet().to(device)
+#run_model(model,40,'lenet')
+#model = MLP()
+#run_model(model,20,'mlp')
+#model = ResNet(Block,[2,2,2,2],10).to(device)
 #run_model(model,40,'resnet')
 
 #for i in range(3):

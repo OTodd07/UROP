@@ -1,0 +1,12 @@
+lenet : 99.41
+mlp : 65.47
+resnet : 99.85
+
+lenet : 97.65
+mlp : 56.16
+resnet : 98.51
+
+lenet : 99.07
+mlp : 62.26
+resnet : 99.52
+
