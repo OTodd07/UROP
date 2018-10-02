@@ -261,9 +261,7 @@ class MLP(nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
         self.fc1 = nn.Linear(784,600)
-        self.fc2 = nn.Linear(600,300)
-        self.fc3 = nn.Linear(300,150)
-        self.fc4 = nn.Linear(150,10)
+        self.fc2 = nn.Linear(200,10)
 
     def forward(self, x):
         x = flatten_tensor(x)
@@ -470,7 +468,7 @@ models = [LeNet(), MLP(), ResNet(Block,[2,2,2,2],10)]
 roots = ['./data/modified_mnist','./data/modified_mnist','./data/original_mnist']
 pathos = [True,False,False]
 data = []
-
+'''
 for i in range(3):
     f = open('Graphs/discriminator/accuracies.txt','a')
 
@@ -509,10 +507,11 @@ for i in range(3):
     f.close()
 
 
+'''
 
-#model = LeNet()
+model = MLP()
 #show_loss(model)
-#run_model(model,20,'lenet')
+run_model(model,20,'lenet')
 #model = MLP()
 #run_model(model,40,'mlp')
 #model = ResNet(Block,[2,2,2,2],10)
