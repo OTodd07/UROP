@@ -40,9 +40,6 @@ class SkinDataset(Dataset):
         img_name = os.path.join(self.root,files[idx + 1])
 
         img = Image.open(img_name)
-        #print(type(img))
-        #print(type(self.transform(img)))
-        #return img_name, io.imread(img_name,as_grey=True)
         return img_name, self.transform(img)
 
 
@@ -52,13 +49,8 @@ train_loader = DataLoader(train_set,batch_size=4,shuffle=False)
 ground_set = SkinDataset('data/Segmentation/ISIC2018_Task1_Training_GroundTruth')
 ground_loader = DataLoader(train_set,batch_size=4,shuffle=False)
 
-#Image.open(test_set[2][0])
-#print(test_set[0][0])
 test = transforms.ToPILImage()
 im = test(train_set[0][1])
-#print(type(im))
 im.show()
 im = test(ground_set[0][1])
 im.show()
-#plt.imshow(test,cmap='gray')
-#plt.show()

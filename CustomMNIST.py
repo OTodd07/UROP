@@ -44,25 +44,13 @@ class CustomMNIST(data.Dataset):
         else:
             img, target = self.test_data[index], self.test_labels[index]
 
-        #img = np.array(img, dtype=np.float32)
-        #img = Image.fromarray(img.numpy(), mode='L')
-        #img.shape = (28,28)
-        #print(len(img.shape))
         img = Image.fromarray(img.numpy(),mode='L')
-        #img.save("tmp.png")
         if self.transform is not None:
             img = self.transform(img)
 
         return img, target
 
     def process(self):
-
-        '''
-
-        mndata = MNIST(os.path.join(self.root,self.raw_folder), return_type='numpy')
-        self.test_data, self.test_labels = mndata.load_testing()
-        self.train_data, self.test_labels = mndata.load_training()
-        '''
 
         if self.patho:
             train_labels = 'train-patho-idx1-ubyte'
@@ -82,11 +70,8 @@ class CustomMNIST(data.Dataset):
         )
 
 
-        #f1 = open('data//modified_mnist//processed//test', 'wb')
-        #with open('data//modified_mnist//processed//test', 'wb') as f:
         with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
             torch.save(training_set, f)
-        #with open('data//modified_mnist//processed//training', 'wb') as f:
         with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
             torch.save(test_set, f)
 

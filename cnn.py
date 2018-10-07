@@ -12,22 +12,6 @@ from torch.autograd import Variable
 import pandas as pd
 import numpy as np
 
-
-#Download the mnist data used for training and testing the network
-
-#mnist_trainset = datasets.MNIST(root='./data/original_mnist', train=True, download=True, transform=transforms.Compose([transforms.ToTensor()]))
-#mnist_testset  = datasets.MNIST(root='./data/original_mnist', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
-#mnist_trainset = CustomMNIST(root='./data/modified_mnist',train=True,process=True,transform=transforms.Compose([transforms.ToTensor()]))
-#mnist_testset = CustomMNIST(root='./data/modified_mnist',train=False,process=True,transform=transforms.Compose([transforms.ToTensor()]))
-
-
-
-#Initialise the data loaders for training and testing
-#train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=4, shuffle=True)
-#test_loader  = torch.utils.data.DataLoader(mnist_testset,batch_size=4, shuffle=True)
-#train_loader = None
-#test_loader = None
-
 device = torch.device("cuda:0")
 
 fig, ax = plt.subplots()
@@ -79,17 +63,6 @@ class LeNet(nn.Module):
         )
 
     def forward(self, x):
-        '''
-
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = flatten_tensor(x)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-<<<<<<< Updated upstream
-        '''
         output =  nn.parallel.data_parallel(self.convlayers, x, range(1))
         output = flatten_tensor(output)
         return nn.parallel.data_parallel(self.fc, output, range(1))
@@ -276,15 +249,7 @@ class MLP(nn.Module):
         return 'mlp'
 
 
-
-
-
-
 def train(model,optimizer,criterion,x,y,train_loader):
-    #x = []
-    #y = []
-    #for e in range(epoch):
-    #print(e)
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
         inputs, labels = data
@@ -296,16 +261,8 @@ def train(model,optimizer,criterion,x,y,train_loader):
         running_loss += loss.item()
         loss.backward()
         optimizer.step()
-    #print(running_loss/len(train_loader))
     x.append(len(x) + 1)
     y.append(running_loss/len(train_loader))
-
-
-    #plot_loss(x,y)
-
-    #print('Finished training')
-    #return [x,y]
-
 
 
 # Runs the training loop for 'epoch' number of times
@@ -315,10 +272,8 @@ def add_loss_point(frame, *fargs):
     optimizer = fargs[1]
     criterion = fargs[2]
     running_loss = 0.0
-    #x = train_loader
     y = 0
 
-    #for i, data in enumerate(train_loader, 0):
 
     data = fargs[5][frame][1]
     inputs, labels = data
@@ -371,15 +326,6 @@ def test(model,criterion,x,y,accuracy,test_loader):
             return 100 * correct / total
         x.append(len(x) + 1)
         y.append(running_loss/len(test_loader))
-'''
-    accuarcies =[]
-    for i in range(10):
-        accuarcies.append(100 * class_correct[i] /class_total [i])
-        #print('Accuracy of class %d was: %d %%' %(i,(100 * class_correct[i] / class_total[i])))
-    #print('Accuracy of network on the 10000 test images: %d %%' %(100 * correct / total))
-    return accuarcies
-
-'''
 
 def plot_loss(xVals, yVals):
 
@@ -393,15 +339,6 @@ def init():
     ax.set_xlim(0,2500)
     ax.set_ylim(0,3)
     return ln,
-
-
-#optimizer = optim.Adamax(model.parameters(),0.0001)
-#optimizer = optim.Adadelta(model.parameters(), 0.0001)
-#optimizer = optim.SGD(model.parameters(),0.0001,0.8)
-#optimizer = create_optimizer(0.0001, model, 0.8)
-#train(model,1,optimizer,criterion)
-
-
 
 def show_loss(model):
     loaders = init_datasets('./data/modified_mnist',False)
@@ -428,47 +365,13 @@ def run_model(model,epoch,loaders):
     return test_loss_x,test_loss_y,train_loss_x,train_loss_y
 
 
-    '''
-    plt.xlabel('epoch')
-    plt.ylabel('loss')
-    plt.plot(train_loss_x,train_loss_y)
-    plt.savefig('Graphs/discriminator/' + name + 'pert_train_loss.png')
-    plt.clf()
-    plt.xlabel('epoch')
-    plt.ylabel('loss')
-    plt.plot(test_loss_x,test_loss_y)
-    plt.savefig('Graphs/discriminator/' + name + 'pert_test_loss.png')
-    plt.clf()
-    '''
-
-'''
-x = range(0,100)
-y = x
-print(x)
-print(y)
-plt.figure(0)
-plt.plot(x,y,label='Linear')
-plt.legend(loc='best')
-#plt.savefig('Graphs/linear.png')
-#plt.clf()
-y = np.square(x)
-plt.figure(1)
-plt.plot(x,y,label='Quadratic')
-
-plt.legend(loc='best')
-
-plt.figure(0)
-plt.savefig('Graphs/linear.png')
-plt.figure(1)
-plt.savefig('Graphs/quadratic.png')
-'''
-
 names = ['pert_classification', 'digit_classificaiton_pert', 'digit_classification_norm' ]
 models = [LeNet(), MLP(), ResNet(Block,[2,2,2,2],10)]
 roots = ['./data/modified_mnist','./data/modified_mnist','./data/original_mnist']
 pathos = [True,False,False]
 data = []
-'''
+
+
 for i in range(3):
     f = open('Graphs/discriminator/accuracies.txt','a')
 
@@ -507,72 +410,3 @@ for i in range(3):
     f.close()
 
 
-'''
-
-model = MLP()
-#show_loss(model)
-run_model(model,20,'lenet')
-#model = MLP()
-#run_model(model,40,'mlp')
-#model = ResNet(Block,[2,2,2,2],10)
-#run_model(model,40,'resnet')
-#print(device)
-#model = LeNet().to(device)
-#run_model(model,40,'lenet')
-#model = MLP()
-#run_model(model,20,'mlp')
-#model = ResNet(Block,[2,2,2,2],10).to(device)
-#run_model(model,40,'resnet')
-
-#for i in range(3):
-
-
-
-
-
-
-
-'''
-
-
-
-
-#model = ResNet(Block,[2,2,2,2],10)
-losses = []
-accuracies = []
-criterion = nn.CrossEntropyLoss()
-
-lr = 0.001
-momentum = 0.8
-#run_model(LeNet(), losses, accuracies, lr, momentum, criterion)
-#run_model(MLP(), losses, accuracies, lr, momentum, criterion)
-#run_model(ResNet(Block,[2,2,2,2],10), losses, accuracies, lr, momentum, criterion)
-#run_model(LeNet(), losses, accuracies, lr, momentum, criterion)
-
-
-plt.xlabel('epoch')
-plt.ylabel('loss')
-
-
-plt.plot(losses[0][0], losses[0][1])
-plt.plot(losses[1][0], losses[1][1])
-plt.plot(losses[2][0], losses[2][1])
-plt.plot(losses[3][0], losses[3][1])
-plt.legend(['LeNet','MLP','ResNet','VGG'],loc='upper right')
-plt.savefig('Graphs/originalLoss.png')
-#plt.show()
-
-
-
-x = ['0','1','2','3','4','5','6','7','8','9']
-
-
-df = pd.DataFrame(np.c_[accuracies[0],accuracies[1]], accuracies[2], accuracies[3], index=x)
-print(df)
-ax = df.plot.bar()
-ax.legend(['LeNet','MLP','ResNet','VGG'])
-plt.savefig('Graphs/originalAccuracy.png')
-#plt.show()
-
-
-'''

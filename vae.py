@@ -60,9 +60,8 @@ class VAE(nn.Module):
 
 def calculate_loss(original, reconstructed, mean, log_var):
     recon_loss = F.binary_cross_entropy(reconstructed, original.view(-1,784), size_average=False)
-    #KLD = -0.5 * torch.sum( 1 - mean.pow(2) + log_var - log_var.exp())
-    return recon_loss
-    #return recon_loss + KLD
+    KLD = -0.5 * torch.sum( 1 - mean.pow(2) + log_var - log_var.exp())
+    return recon_loss + KLD
 
 model = VAE()
 optimizer = optim.Adam(model.parameters(),lr=1e-3)
@@ -87,8 +86,6 @@ def test(epoch):
     with torch.no_grad():
         for i, (original,_) in enumerate(test_loader):
             recon, mean, sd = model(original)
-            #print(recon.size())
-            #print(original.size())
             loss = calculate_loss(original,recon,mean,sd)
             running_loss += loss.item()
             if i == len(test_loader) - 1:
