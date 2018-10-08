@@ -15,6 +15,7 @@ class CustomMNIST(data.Dataset):
     training_file = 'training.pt'
     test_file = 'test.pt'
 
+    #Initialise the correct data sets
     def __init__(self,root,transform=None,process=True,train=True,patho=False):
         self.patho = patho
         self.root = os.path.expanduser(root)
@@ -32,12 +33,15 @@ class CustomMNIST(data.Dataset):
                 os.path.join(self.root, self.processed_folder, self.test_file))
 
 
+
+    #Return the length of the data loader
     def __len__(self):
         if self.train:
             return len(self.train_data)
         else:
             return len(self.test_data)
 
+    #Get a certain item from the dataset
     def __getitem__(self, index):
         if self.train:
             img, target = self.train_data[index], self.train_labels[index]
@@ -50,6 +54,8 @@ class CustomMNIST(data.Dataset):
 
         return img, target
 
+
+    # Initialise either modified or original MNIST data
     def process(self):
 
         if self.patho:
@@ -76,6 +82,8 @@ class CustomMNIST(data.Dataset):
             torch.save(test_set, f)
 
 
+
+#Following two functions need to check for special numbers to ensure the MNIST files are valid
 
 def read_label_file(path):
     with open(path, 'rb') as f:
