@@ -33,15 +33,18 @@ class VAE(nn.Module):
         self.fc2  = nn.Linear(20,400)
         self.fc3  = nn.Linear(400,784)
 
+
+    #Create the vectors for the mean and standard deviaiton
     def encode(self, x):
         y = F.relu(self.fc1(x))
         return self.mean(y), self.sd(y)
 
+    # Transform the latent space vector back into an MNIST vector format
     def decode(self,z):
         return F.sigmoid(self.fc3(F.relu(self.fc2(z))))
 
+    #Reparametrisation trick to make back propagation possible with randomised values from the mean and standard deviation
     def reparameterise(self, mean, sd):
-        #distr = Normal(0,1)
         if self.training:
             std = torch.exp(0.5*sd)
             e = torch.randn_like(sd)
@@ -57,7 +60,7 @@ class VAE(nn.Module):
 
 
 
-
+#Combine the reconstruction and KLD loss to calculate the overall loss
 def calculate_loss(original, reconstructed, mean, log_var):
     recon_loss = F.binary_cross_entropy(reconstructed, original.view(-1,784), size_average=False)
     KLD = -0.5 * torch.sum( 1 - mean.pow(2) + log_var - log_var.exp())
@@ -95,6 +98,7 @@ def test(epoch):
 
         print(running_loss/len(test_loader))
 
+#Save the output of the vae every 50 iterations
 for i in range(1,10):
     print(i)
     train(i)

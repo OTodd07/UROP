@@ -72,6 +72,7 @@ class LeNet(nn.Module):
         return 'lenet'
 
 
+# Created model with Resnet Architecture
 class ResNet(nn.Module):
 
     def __init__(self, block, stacks,  num_classes):
@@ -127,6 +128,7 @@ class ResNet(nn.Module):
         return x
 
 
+# Component for the ResNet model
 
 class Block(nn.Module):
 
@@ -228,6 +230,7 @@ class VGG(nn.Module):
         x = F.softmax(x, dim=0)
         return x
 
+# Simple MLP model using only linear layers
 
 class MLP(nn.Module):
 
@@ -265,7 +268,7 @@ def train(model,optimizer,criterion,x,y,train_loader):
     y.append(running_loss/len(train_loader))
 
 
-# Runs the training loop for 'epoch' number of times
+# Used to dynamically add points to a graph so that points can be viewed during training
 def add_loss_point(frame, *fargs):
 
     model = fargs[0]
@@ -286,9 +289,6 @@ def add_loss_point(frame, *fargs):
     loss.backward()
     optimizer.step()
 
-    print(running_loss)
-    print(y)
-    print('here')
 
     fargs[3].append(frame)
     fargs[4].append(running_loss)
@@ -340,6 +340,7 @@ def init():
     ax.set_ylim(0,3)
     return ln,
 
+#Allows the user to view points as they are calculated to assess correctness of model without waiting untill the end of training
 def show_loss(model):
     loaders = init_datasets('./data/modified_mnist',False)
     criterion = nn.CrossEntropyLoss()
@@ -349,7 +350,7 @@ def show_loss(model):
     plt.show()
 
 
-
+#Runs the specified model for the 'epoch' number of time using the data in 'loaders'
 def run_model(model,epoch,loaders):
     test_loss_x = []
     test_loss_y = []
@@ -372,6 +373,7 @@ pathos = [True,False,False]
 data = []
 
 
+#Plots the data of the three models used graphically to compare accuracy in training and testing
 for i in range(3):
     f = open('Graphs/discriminator/accuracies.txt','a')
 

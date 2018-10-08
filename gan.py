@@ -7,9 +7,12 @@ import torch
 from torchvision.utils import save_image
 from torchvision import transforms
 
-
+#Fetch the MNIST data from the data folder
 mnist_trainset = CustomMNIST(root='./data/original_mnist',train=True,process=True,transform=transforms.Compose([transforms.Resize((64,64)),transforms.ToTensor()]))
+
 train_loader = torch.utils.data.DataLoader(mnist_trainset,batch_size=100, shuffle=True)
+
+#Enable GPU access for model training
 device = torch.device('cuda:0')
 
 
@@ -20,6 +23,7 @@ def flatten_tensor(x):
     return x.view(-1,length)
 
 
+#Define the discriminator component of the generative model
 
 class Discriminator(nn.Module):
     def __init__(self):
@@ -45,6 +49,8 @@ class Discriminator(nn.Module):
         output = nn.parallel.data_parallel(self.layers, x, range(1))
         return output.view(-1,1).squeeze(1)
 
+
+#Define the generator component of the generative model
 
 class Generator(nn.Module):
     def __init__(self):
@@ -73,6 +79,7 @@ class Generator(nn.Module):
         return output
         #return self.layers(x)
 
+#Used fixed data so progress can more easily be seen during each epoch
 fixed_noise = torch.randn(100,100,1,1, device=device)
 net_D = Discriminator().to(device)
 net_G = Generator().to(device)

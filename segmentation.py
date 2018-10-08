@@ -26,15 +26,6 @@ class SkinDataset(Dataset):
     def __getitem__(self, idx):
         count = 0
         img_name = ''
-        '''
-        for root, dirs, files in os.walk(self.root):
-            for f in files:
-                if count == idx:
-                    img_name = os.path.join(root,f)
-                    break
-                count+=1
-
-        '''
         files = sorted(os.listdir(self.root))
         print(files)
         img_name = os.path.join(self.root,files[idx + 1])
