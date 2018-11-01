@@ -47,7 +47,10 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         output = nn.parallel.data_parallel(self.layers, x, range(1))
-        return output.view(-1,1).squeeze(1)
+        print(output.size())
+        output = output.view(-1,1).squeeze(1)
+        print(output.size())
+        return output
 
 
 #Define the generator component of the generative model
@@ -79,52 +82,55 @@ class Generator(nn.Module):
         return output
         #return self.layers(x)
 
-#Used fixed data so progress can more easily be seen during each epoch
-fixed_noise = torch.randn(100,100,1,1, device=device)
-net_D = Discriminator().to(device)
-net_G = Generator().to(device)
-criterion = nn.BCELoss()
-optimizer_D = optim.Adam(net_D.parameters(), lr=0.0002)
-optimizer_G = optim.Adam(net_G.parameters(), lr=0.0002)
-real_label = 1
-fake_label = 0
 
-for epoch in range(100):
-    print(epoch)
-    for i,data in enumerate(train_loader,0):
-        net_D.zero_grad()
-        real_img = data[0].to(device)
-        batch_size = real_img.size(0)
-        label = torch.full((batch_size,),real_label,device=device)
+def train():
+    for epoch in range(100):
+        print(epoch)
+        for i,data in enumerate(train_loader,0):
+            net_D.zero_grad()
+            real_img = data[0].to(device)
+            batch_size = real_img.size(0)
+            label = torch.full((batch_size,),real_label,device=device)
 
-        out = net_D(real_img)
-        D_real_Err = criterion(out,label)
-        D_real_Err.backward()
+            out = net_D(real_img)
+            D_real_Err = criterion(out,label)
+            D_real_Err.backward()
 
 
-        noise = torch.randn(batch_size,100,1,1,device=device)
-        fake = net_G(noise)
-        label.fill_(fake_label)
-        out = net_D(fake.detach())
-        D_fake_Err = criterion(out,label)
-        D_fake_Err.backward()
-        optimizer_D.step()
+            noise = torch.randn(batch_size,100,1,1,device=device)
+            fake = net_G(noise)
+            label.fill_(fake_label)
+            out = net_D(fake.detach())
+            D_fake_Err = criterion(out,label)
+            D_fake_Err.backward()
+            optimizer_D.step()
 
 
 
 
-        net_G.zero_grad()
-        label.fill_(real_label)
-        out = net_D(fake)
-        G_Err = criterion(out,label)
-        G_Err.backward()
-        optimizer_G.step()
+            net_G.zero_grad()
+            label.fill_(real_label)
+            out = net_D(fake)
+            G_Err = criterion(out,label)
+            G_Err.backward()
+            optimizer_G.step()
 
-    fake = net_G(fixed_noise)
-    fake = fake.view(100,1,64,64)
-    print(fake.size())
-    save_image(fake.detach(), 'Graphs/gan/fake_sample' + str(epoch) + '.png')
+        fake = net_G(fixed_noise)
+        fake = fake.view(100,1,64,64)
+        print(fake.size())
+        save_image(fake.detach(), 'Graphs/gan/fake_sample' + str(epoch) + '.png')
 
+if __name__ == '__main__':
+    #Used fixed data so progress can more easily be seen during each epoch
+    fixed_noise = torch.randn(100,100,1,1, device=device)
+    net_D = Discriminator().to(device)
+    net_G = Generator().to(device)
+    criterion = nn.BCELoss()
+    optimizer_D = optim.Adam(net_D.parameters(), lr=0.0002)
+    optimizer_G = optim.Adam(net_G.parameters(), lr=0.0002)
+    real_label = 1
+    fake_label = 0
+    train()
 
 
 
